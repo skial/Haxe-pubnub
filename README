@@ -1,0 +1,23 @@
+haXe client (JS) code for the pubnub service. PubNub is a massively scalable
+real-time service for web and mobile games.
+
+INFO
+------
+http://www.pubnub.com/
+http://github.com/pubnub/pubnub-api/tree/master/javascript/
+
+SERVER
+------
+none
+
+CLIENT
+------
+Use compile.hxml to create javascript source. Then open example/client_example/subscribe/hx_sub.html
+and replace <!-- Paste the url to pubnub js file --> with the code found at 
+http://www.pubnub.com/account-javascript-api-include as this includes your pub_key and
+sub_key. 
+
+Then lauch it.
+
+Then do the same for example/client_example/subscribe/hx_pub.html which will
+send the message 'hello skial bainn' to hx_sub.html.

@@ -1,0 +1,13 @@
+-js bin/subscribe.js
+-D subscribe
+-cp com
+-cp examples
+-main Main
+
+--next
+
+-js bin/publish.js
+-D publish
+-cp com
+-cp examples
+-main Main
