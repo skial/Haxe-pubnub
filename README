@@ -8,7 +8,8 @@ http://github.com/pubnub/pubnub-api/tree/master/javascript/
 
 SERVER
 ------
-none
+You can publish messages on neko, js and flash and subscribe to channels on neko for far. Alot of issues
+still to sort out.
 
 CLIENT
 ------

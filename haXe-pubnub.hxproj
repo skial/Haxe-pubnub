@@ -8,13 +8,15 @@
     <movie fps="0" />
     <movie width="0" />
     <movie height="0" />
-    <movie version="11" />
+    <movie version="9" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="example" />
     <class path="com" />
+    <class path="ext2" />
+    <class path="ext1" />
   </classpaths>
   <!-- Build options -->
   <build>
@@ -33,17 +35,21 @@
     <compile path="src\Main.hx" />
     <compile path="Main.hx" />
   </compileTargets>
+  <!-- Assets to embed into the output SWF -->
+  <library>
+    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
+  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <!-- example: <hidden path="..." /> -->
   </hiddenPaths>
   <!-- Executed before build -->
-  <preBuildCommand />
+  <preBuildCommand>compile.hxml</preBuildCommand>
   <!-- Executed after build -->
   <postBuildCommand alwaysRun="False" />
   <!-- Other project options -->
   <options>
-    <option showHiddenPaths="False" />
+    <option showHiddenPaths="True" />
     <option testMovie="Custom" />
     <option testMovieCommand="" />
   </options>

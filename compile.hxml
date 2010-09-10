@@ -1,13 +1,69 @@
--js bin/subscribe.js
+-js bin/wrap-sub.js
+-D wrapped
 -D subscribe
 -cp com
--cp examples
 -main Main
 
 --next
 
--js bin/publish.js
+-js bin/wrap-pub.js
+-D wrapped
 -D publish
 -cp com
--cp examples
+-main Main
+
+--next
+
+-swf9 bin/haxe-sub.swf
+-D native
+-D subscribe
+-cp com
+-cp ext2
+-main Main
+
+--next
+
+-swf9 bin/haxe-pub.swf
+-D native
+-D publish
+-cp com
+-cp ext2
+-main Main
+
+--next
+
+-neko bin/haxe-sub.n
+-D native
+-D subscribe
+-cp com
+-cp ext2
+-main Main
+
+--next
+
+-neko bin/haxe-pub.n
+-D native
+-D publish
+-cp com
+-cp ext2
+-main Main
+
+--next
+
+-cpp bin/cpp-haxe-sub
+-debug
+-v
+-D native
+-D subscribe
+-cp com
+-cp ext1
+-main Main
+
+--next
+
+-cpp bin/cpp-haxe-pub
+-D native
+-D publish
+-cp com
+-cp ext1
 -main Main
