@@ -18,6 +18,9 @@ import flash.Lib;
 import js.Lib;
 #end
 
+// cacls [filename] /P -(change permission) [user:permission-type]
+// cacls vc100.pdb /P Administrator:F
+
 /**
  * ...
  * @author Skial Bainn

@@ -51,8 +51,6 @@
 --next
 
 -cpp bin/cpp-haxe-sub
--debug
--v
 -D native
 -D subscribe
 -cp com
