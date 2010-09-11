@@ -16,7 +16,7 @@ import haxe.io.BytesOutput;
 using StringTools;
 
 class Pubnub {
-	
+	#if (neko || cpp)
 	private static inline var ORIGIN:String = 'http://pubnub-prod.appspot.com';
 	private static inline var LIMIT:Int = 1700;
 	private static var PUBLISH_KEY:String = '';
@@ -201,5 +201,5 @@ class Pubnub {
 		
 		return _resp_;
 	}
-	
 }
+#end

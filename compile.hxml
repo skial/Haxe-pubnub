@@ -14,24 +14,6 @@
 
 --next
 
--swf9 bin/haxe-sub.swf
--D native
--D subscribe
--cp com
--cp ext2
--main Main
-
---next
-
--swf9 bin/haxe-pub.swf
--D native
--D publish
--cp com
--cp ext2
--main Main
-
---next
-
 -neko bin/haxe-sub.n
 -D native
 -D subscribe

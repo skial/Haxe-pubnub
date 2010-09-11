@@ -36,15 +36,11 @@ class Main {
 	
 	static function main() {
 		#if native
-		var ser:Pubnub = new Pubnub('f5b30c7b-5670-4b79-8a84-786e5e124c6d', 'b8a75428-9598-11df-b43f-b10dce6abade');
+		var ser:Pubnub = new Pubnub('pub_key', 'sub_key');
 		var target:String = '';
 			// set target to compile target
 			#if neko
 			target = 'NEKO';
-			#elseif js
-			target = 'JAVASCRIPT';
-			#elseif flash9
-			target = 'FLASH 9 or greater';
 			#elseif cpp
 			target = 'CPP';
 			#end
