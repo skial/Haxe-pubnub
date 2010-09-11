@@ -8,8 +8,9 @@ http://github.com/pubnub/pubnub-api/tree/master/javascript/
 
 SERVER
 ------
-You can publish messages on neko, js and flash and subscribe to channels on neko for far. Alot of issues
-still to sort out.
+You can publish and subscribe with neko and cpp targets. The publish method work with both js and flash,
+but I've set the native haxe class to only allow the neko and cpp targets. If you want to subscribe to
+channels through flash, use external interface.
 
 CLIENT
 ------
