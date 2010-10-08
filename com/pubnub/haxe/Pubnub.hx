@@ -3,6 +3,10 @@
  * @author Skial Bainn
  */
 
+ /*
+  * Based on PubNub python code - http://github.com/pubnub/pubnub-api/blob/master/python/Pubnub.py
+  */
+
 package pubnub.haxe;
 
 #if !cpp
@@ -10,196 +14,182 @@ import chx.formats.json.JSON;
 #else
 import formats.json.JSON;
 #end
+
 import haxe.Http;
 import haxe.io.BytesOutput;
 
-using StringTools;
-
 class Pubnub {
-	#if (neko || cpp)
-	private static inline var ORIGIN:String = 'http://pubnub-prod.appspot.com';
-	private static inline var LIMIT:Int = 1700;
-	private static var PUBLISH_KEY:String = '';
-	private static var SUBSCRIBE_KEY:String = '';
 	
-	private static var _hash_:Hash<Dynamic> = new Hash<Dynamic>();
+	public static inline var ORIGIN:String = 'http://pubnub-prod.appspot.com';
+	public static inline var LIMIT:Int = 1700;
+	public var PUBLISH_KEY:String;
+	public var SUBSCRIBE_KEY:String;
 	
-	/**
-	 * Init the Pubnub Client API
-	 * @param	publish_key		-	required key to send messages
-	 * @param	subscribe_key	-	required key to receive messages
-	 */
+	private static var args:Dynamic = { };
+
 	public function new(publish_key:String, subscribe_key:String) {
-		PUBLISH_KEY = publish_key;
-		SUBSCRIBE_KEY = subscribe_key;
+		this.PUBLISH_KEY = publish_key;
+		this.SUBSCRIBE_KEY = subscribe_key;
 	}
 	
-	/**
-	 * Publish
-	 * 
-	 * Send a message to a channel
-	 * @param	channel
-	 * @param	message
-	 * @return	either String or Int
-	 */
-	public function publish(channel:String, message:String):Dynamic {
-		// Capture User Input
-		var _channel_:String = SUBSCRIBE_KEY + '/' + channel;
-		var _message_:String = JSON.encode(message);
+	public function publish(_channel:String, _message:String):Dynamic {
+		// Fail is bad input
+		if (_channel == null || _message == null) {
+			throw 'Method publish : Missing Channel or Message';
+			return false;
+		}
 		
-		// Fail if message too long
-		if (_message_.length > LIMIT) {
-			throw 'Message TOO LONG (' + LIMIT + ' LIMIT)';
+		// Capture user input
+		var channel:String = this.SUBSCRIBE_KEY + '/' + _channel;
+		var message:String = JSON.encode(_message);
+		
+		// Fail if message to long
+		if (message.length > LIMIT) {
+			throw 'Method publish : Message TOO LONG ( ' + LIMIT + ' LIMIT)';
+			return false;
 		}
 		
 		// Send message
-		var _hash_:Hash<Dynamic> = new Hash<Dynamic>();
-		_hash_.set('publish_key', PUBLISH_KEY);
-		_hash_.set('channel', _channel_);
-		_hash_.set('message', _message_);
-		var _resp_:Dynamic = this._request(ORIGIN + '/pubnub-publish', _hash_);
+		var response = this._request(ORIGIN + '/pubnub-publish', { 
+				publish_key:this.PUBLISH_KEY,
+				channel:channel,
+				message:message
+			}
+		);
 		
-		return _resp_;
+		return response;
+		
 	}
 	
-	/**
-	 * Subscribe
-	 * 
-	 * This is blocking
-	 * Listen for a message on a channel
-	 * 
-	 * @param	channel
-	 * @param	handler	-	handler must return a Bool value, true to continue listening, false to cut connection
-	 */
-	public function subscribe(channel:String, handler:Dynamic) {
-		_hash_.set('channel', channel);
-		_hash_.set('callback', handler);
-		var _channel_:String 	= SUBSCRIBE_KEY + '/' + channel;
-		var _timetoken_:String 	= (_hash_.exists('timetoken')==true)	? new String(_hash_.get('timetoken')) 	: '0'; 
-		// new String() - above - is needed to get around neko error (__s)
-		var _server_:String		= (_hash_.exists('server') == true)		? _hash_.get('server')		: null;
-		var _continue_:Bool 		= true;
-		var _resp_:Dynamic;
+	public function subscribe(_channel:String, _handler:Dynamic) {
+		// Fail is missing channel
+		if (_channel == null) {
+			throw 'Method subscribe : Missing Channel';
+			return false;
+		}
 		
-		// Find server
-		if (_server_ == null) {
-			var __hash__:Hash<Dynamic> = new Hash<Dynamic>();
-			__hash__.set('channel', _channel_);
-			_resp_ = this._request(ORIGIN + '/pubnub-subscribe', __hash__);
+		// Fail if missing callback (_handler)
+		if (_handler == null) {
+			throw 'Method subscribe : Missing Callback (param _handler)';
+			return false;
+		}
+		
+		// Capture user input
+		var channel:String = this.SUBSCRIBE_KEY + '/' + _channel;
+		var handler:Dynamic = _handler;
+		var timetoken:String = (Reflect.hasField(args, 'timetoken') == true) ? new String(args.timetoken) : '0';
+		var server:Dynamic = (Reflect.hasField(args, 'server') == true) ? args.server : false;
+		var listening:Bool = true;
+		
+		// Find Server
+		if (!server) {
+			var resp_for_server = this._request(ORIGIN + '/pubnub-subscribe', { channel:channel } ).data;
 			
-			if (_resp_.data.server == null) {
-				trace('Incorrect API Keys *OR* Out of PubNub Credits');
-				trace('Account API Keys http://www.pubnub.com/account');
-				trace('Buy Credits http://www.pubnub.com/account-buy-credit');
+			if (Reflect.hasField(resp_for_server, 'server') == false) {
+				throw 'Method subscribe : ' + args + ' Incorrect API Keys *OR* Out of PubNub Credits\n' +
+						'Account API Keys http://www.pubnub.com/account\n' +
+						'Buy Credits http://www.pubnub.com/account-buy-credit\n';
 				return false;
 			}
 			
-			_server_ = _resp_.data.server;
-			_hash_.set('server', _server_);
+			server = resp_for_server.server;
+			args.server = server;
 		}
 		
 		try {
 			// Wait for message
-			var ___hash___:Hash<Dynamic> = new Hash<Dynamic>();
-			___hash___.set('channel', _channel_);
-			___hash___.set('timetoken', _timetoken_);
-			
-			var __resp__:Dynamic 				= this._request('http://' + _server_ + '/', ___hash___);
-			var _messages_:Array<Dynamic> 	= __resp__.data.messages;
-			var __timetoken__:String 			= __resp__.data.timetoken;
+			var response = this._request('http://' + server + '/', {
+				channel:channel,
+				timetoken:timetoken
+			}).data;
 			
 			// If we lost a server connection
-			if (_messages_[0] == null) {
-				_hash_.remove('server');
-				subscribe(channel, handler);
+			if (!Reflect.hasField(response, 'messages') && !response.messages[0]) {
+				args.server = false;
+				return this.subscribe(_channel, _handler);
 			}
 			
 			// If it was a timeout
-			if (_messages_[0] == 'xdr.timeout') {
-				_hash_.set('timetoken', __timetoken__);
-				subscribe(channel, handler);
-			}
-			// Run user handler and reconnect if user permits 
-			for (m in _messages_) {
-				_continue_ = handler(m);
+			if (Reflect.field(response, 'messages')[0] == 'xdr.timeout') {
+				args.timetoken = response.timetoken;
+				return this.subscribe(_channel, _handler);
 			}
 			
-			// If okay to keep listening
-			if (_continue_) {
-				_hash_.set('timetoken', __timetoken__);
-				subscribe(channel, handler);
+			// Run user callback (_handler) and reconnect if user permits
+			for (message in response.messages) {
+				listening = handler(message);
 			}
 			
+			// If ok to keep listening
+			if (listening) {
+				args.timetoken = response.timetoken;
+				return this.subscribe(_channel, _handler);
+			}
 		} catch (e:Dynamic) {
-			_hash_.remove('server');
-			subscribe(channel, handler);
+			args.server = false;
+			return this.subscribe(_channel, _handler);
 		}
 		
-		// Done listening
+		// Done Listening
 		return true;
 	}
 	
-	/**
-	 * History
-	 * 
-	 * Load history from a channel
-	 * 
-	 * Messages remain in hostory for up to 30 days.
-	 * Up to 100 messages returnable.
-	 * Messages order by most recent first
-	 * 
-	 * @param	channel
-	 * @param	?limit
-	 * @return
-	 */
-	public function history(channel:String, ?limit:Int = 10):Dynamic {
-		if (limit > 100) {
-			limit = 100;
+	public function history(_channel:String, ?_limit:Int = 10):Dynamic {
+		if (_channel == null) {
+			throw 'Method history : Missing Channel';
+			return false;
 		}
 		
-		var _channel_:String = SUBSCRIBE_KEY + '/' + channel;
-		var _hash_:Hash<Dynamic> = new Hash<Dynamic>();
-		_hash_.set('channel', _channel_);
-		_hash_.set('limit', limit);
-		var _resp_:Dynamic = this._request(ORIGIN + '/pubnub-history', _hash_);
+		// Capture User Input Channel
+		var channel:String = this.SUBSCRIBE_KEY + '/' + _channel;
 		
-		return _resp_;
+		// Get History
+		var response = this._request(ORIGIN + '/pubnub-history', {
+			channel:channel,
+			limit:_limit
+		}).data;
+		
+		return response.messages;
 	}
 	
-	/**
-	 * 
-	 * @param	request
-	 * @param	args
-	 * @return	Can return either string or int
-	 */
-	private function _request(request:String, args:Hash<Dynamic>):Dynamic {
-		args.set('unique', Date.now().toString());
+	private function _request(_request:String, _args:Dynamic) {
+		// Give _args unique time stamp
+		Reflect.setField(_args, 'unique', Date.now().toString());
 		
-		// Format URL Params
-		var _params_:Array<String> = new Array<String>();
-		for (key in args.keys()) {
-			_params_.push('' + StringTools.urlEncode(key) + '=' + StringTools.urlEncode(args.get(key)));
+		// Format URL params
+		var params:Array<String> = [];
+		var args:Array<Dynamic> = Reflect.fields(_args);
+		
+		for (arg in args) {
+			params.unshift(
+								StringTools.urlEncode(Std.string(arg))
+								+ '=' + 
+								StringTools.urlEncode(Std.string(Reflect.field(_args, arg)))
+			); 
 		}
 		
-		// Append Params
-		request += '?' + _params_.join('&');
+		// Append params
+		var request:String = _request + '?' + params.join('&');
 		
-		var _resp_:Dynamic = { };
-		//var _http_:Request = new Request(request);
-		var _http_:Http = new Http(request);
+		// Send request expecting JSONP response
+		var usock = new Http(request);
+		var response:Dynamic = { }
 		
-		_http_.onData = function (data:String) {
-			_resp_.data = JSON.decode(data.replace(data.substr(0, data.indexOf(']') + 1), '').substr(1, data.length - 1));
+		usock.onData = function (data:String) {
+			response.data = JSON.decode(data.substr(data.indexOf('(')+1, data.length-1));
 		}
-		_http_.onStatus = function (status:Int) {
-			_resp_.status = status;
-		}
-		_http_.onError = function (msg:String) {
-			_resp_.error = msg;
-		}
-		_http_.request(false);
 		
-		return _resp_;
+		usock.onStatus = function (status:Int) {
+			response.status = status;
+		}
+		
+		usock.onError = function (msg:String) {
+			response.error = msg;
+		}
+		
+		usock.request(false);
+		
+		return response;
 	}
+	
 }
-#end

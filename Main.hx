@@ -1,6 +1,7 @@
 ﻿package ;
 
 #if native
+import pubnub.haxe.Old_Pubnub;
 import pubnub.haxe.Pubnub;
 #end
 #if neko
@@ -36,7 +37,8 @@ class Main {
 	
 	static function main() {
 		#if native
-		var ser:Pubnub = new Pubnub('pub_key', 'sub_key');
+		//var ser:Old_Pubnub = new Old_Pubnub('demo', 'demo');
+		var ser:Pubnub = new Pubnub('demo', 'demo');
 		var target:String = '';
 			// set target to compile target
 			#if neko
