@@ -45,6 +45,8 @@ class Main {
 			target = 'NEKO';
 			#elseif cpp
 			target = 'CPP';
+			#elseif flash9
+			target = 'FLASH9';
 			#end
 			#if subscribe
 			trace('started ' + target +  ' subscribe method. Waiting for messages...');

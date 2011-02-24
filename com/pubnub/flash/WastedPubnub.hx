@@ -7,18 +7,14 @@
   * Based on PubNub python code - http://github.com/pubnub/pubnub-api/blob/master/python/Pubnub.py
   */
 
-package pubnub.haxe;
+package pubnub.flash;
 
-#if !cpp
-import chx.formats.json.JSON;
-#else
 import formats.json.JSON;
-#end
 
 import haxe.Http;
 import haxe.io.BytesOutput;
 
-class Pubnub {
+class WastedPubnub {
 	
 	public static inline var ORIGIN:String = 'http://pubnub-prod.appspot.com';
 	public static inline var LIMIT:Int = 1700;
@@ -85,60 +81,105 @@ class Pubnub {
 		
 		// Capture user input
 		channel = this.SUBSCRIBE_KEY + '/' + _channel;
+		original_channel = _channel;
 		handler = _handler;
 		timetoken = (Reflect.hasField(args, 'timetoken') == true) ? new String(args.timetoken) : '0';
 		server = (Reflect.hasField(args, 'server') == true) ? args.server : false;
 		listening = true;
 		
 		// Find Server
+		findServer();
+		
+		// Done Listening
+		//return true;
+	}
+	
+	private inline function findServer() {
 		if (!server) {
+			#if !flash9
 			var resp_for_server:Dynamic = this._request(ORIGIN + '/pubnub-subscribe', { channel:channel } ).data;
 			
-			if (Reflect.hasField(resp_for_server, 'server') == false) {
-				throw 'Method subscribe : ' + args + ' Incorrect API Keys *OR* Out of PubNub Credits\n' +
-						'Account API Keys http://www.pubnub.com/account\n' +
-						'Buy Credits http://www.pubnub.com/account-buy-credit\n';
-				return false;
-			}
+			checkServerResponse(resp_for_server);
+			#elseif flash9
+			this._request(ORIGIN + '/pubnub-subscribe', { channel:channel }, checkServerResponse );
+			#end
 			
-			server = resp_for_server.server;
-			args.server = server;
+		} 
+	}
+	
+	private inline function checkServerResponse(_response:String) {
+		var _resp = JSON.decode(_response.substr(_response.indexOf('(') + 1, _response.length - 1));
+		
+		if (Reflect.hasField(_resp, 'server') == false) {
+			throw 'Method subscribe : ' + args + ' Incorrect API Keys *OR* Out of PubNub Credits\n' +
+					'Account API Keys http://www.pubnub.com/account\n' +
+					'Buy Credits http://www.pubnub.com/account-buy-credit\n';
 		}
 		
+		server = _resp.server;
+		args.server = server;
+		
+		tryAndCatch();
+	}
+	
+	private inline function tryAndCatch() {
 		try {
 			// Wait for message
+			#if !flash9
 			var response = this._request('http://' + server + '/', { channel:channel, timetoken:timetoken } ).data;
 			
-			// If we lost a server connection
-			if (!Reflect.hasField(response, 'messages') && !response.messages[0]) {
-				args.server = false;
-				return this.subscribe(_channel, _handler);
-			}
-			
-			// If it was a timeout
-			if (Reflect.field(response, 'messages')[0] == 'xdr.timeout') {
-				args.timetoken = response.timetoken;
-				return this.subscribe(_channel, _handler);
-			}
-			
-			// Run user callback (_handler) and reconnect if user permits
-			for (message in cast(response.messages, Array<Dynamic>)) {
-				listening = handler(message);
-			}
-			
-			// If ok to keep listening
-			if (listening == true) {
-				args.timetoken = response.timetoken;
-				return this.subscribe(_channel, _handler);
-			}
+			searchTryResponse(response);
+			#elseif flash9
+			this._request('http://' + server + '/', { channel:channel, timetoken:timetoken }, searchTryResponse);
+			#end
 			
 		} catch (e:Dynamic) {
 			args.server = false;
-			return this.subscribe(_channel, _handler);
+			#if !flash9
+			subscribe(original_channel, handler);
+			#elseif flash9
+			new Pubnub(this.PUBLISH_KEY, this.SUBSCRIBE_KEY).subscribe(original_channel, handler);
+			#end
+		}
+	}
+	
+	private inline function searchTryResponse(_response:Dynamic) {
+		var _resp = JSON.decode(_response.substr(_response.indexOf('(') + 1, _response.length - 1));
+		
+		// If we lost a server connection
+		if (!Reflect.hasField(_resp, 'messages') && !_resp.messages[0]) {
+			args.server = false;
+			#if !flash9
+			subscribe(original_channel, handler);
+			#elseif flash9
+			new Pubnub(this.PUBLISH_KEY, this.SUBSCRIBE_KEY).subscribe(original_channel, handler);
+			#end
 		}
 		
-		// Done Listening
-		return true;
+		// If it was a timeout
+		if (Reflect.field(_resp, 'messages')[0] == 'xdr.timeout') {
+			args.timetoken = _resp.timetoken;
+			#if !flash9
+			subscribe(original_channel, handler);
+			#elseif flash9
+			new Pubnub(this.PUBLISH_KEY, this.SUBSCRIBE_KEY).subscribe(original_channel, handler);
+			#end
+		}
+		
+		// Run user callback (_handler) and reconnect if user permits
+		for (message in cast(_resp.messages, Array<Dynamic>)) {
+			listening = handler(message);
+		}
+		
+		// If ok to keep listening
+		if (listening == true) {
+			args.timetoken = _resp.timetoken;
+			#if !flash9
+			subscribe(original_channel, handler);
+			#elseif flash9
+			new Pubnub(this.PUBLISH_KEY, this.SUBSCRIBE_KEY).subscribe(original_channel, handler);
+			#end
+		}
 	}
 	
 	public function history(_channel:String, ?_limit:Int = 10):Dynamic {
@@ -159,7 +200,7 @@ class Pubnub {
 		return response.messages;
 	}
 	
-	private function _request(_request:String, _args:Dynamic) {
+	private function _request(_request:String, _args:Dynamic #if flash9 , ?ondata:Dynamic, ?onstatus:Dynamic, ?onerror:Dynamic#end) {
 		// Give _args unique time stamp
 		Reflect.setField(_args, 'unique', Date.now().toString());
 		
@@ -182,17 +223,25 @@ class Pubnub {
 		var usock = new Http(request);
 		var response:Dynamic = { }
 		
+		#if !flash9
 		usock.onData = function (data:String) {
-			response.data = JSON.decode(data.substr(data.indexOf('(') + 1, data.length - 1));
+			//response.data = JSON.decode(data.substr(data.indexOf('(') + 1, data.length - 1));
+			response.data = data;
+			trace('data: ' + response.data);
 		}
 		
 		usock.onStatus = function (status:Int) {
 			response.status = status;
+			trace('status: ' + response.status);
 		}
 		
 		usock.onError = function (msg:String) {
 			response.error = msg;
+			trace('error: ' + response.msg);
 		}
+		#elseif flash9
+		usock.onData = ondata;
+		#end
 		
 		usock.request(false);
 		
