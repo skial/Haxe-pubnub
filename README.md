@@ -1,3 +1,8 @@
+this project needs to be re-worked, its a mess :(
+=
+---
+old readme below
+-
 haXe client (JS) code for the pubnub service. PubNub is a massively scalable
 real-time service for web and mobile games.
 
